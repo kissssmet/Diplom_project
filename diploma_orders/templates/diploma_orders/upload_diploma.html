@@ -1,0 +1,164 @@
+<!-- diploma_orders/templates/diploma_orders/upload_diploma.html -->
+{% extends 'admin/base_site.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">📁 Загрузка дипломной работы</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h5>Информация о дипломе:</h5>
+                        <p><strong>Тема:</strong> {{ diploma.topic }}</p>
+                        <p><strong>Студент:</strong> {{ diploma.student.get_full_name }}</p>
+                        <p><strong>Руководитель:</strong> {{ diploma.supervisor.get_full_name }}</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Текущий файл:</h5>
+                        {% if diploma.file %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-file"></i> 
+                                <strong>{{ diploma.file.name|basename }}</strong>
+                                <span class="badge bg-secondary">{{ diploma.get_file_extension }}</span>
+                                <br>
+                                <small>Загружен: {{ diploma.file.size|filesizeformat }}</small>
+                                <div class="mt-2">
+                                    <a href="{{ diploma.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                        <i class="fas fa-eye"></i> Просмотреть
+                                    </a>
+                                    <a href="{% url 'diploma_orders:download_diploma' diploma.id %}" class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-download"></i> Скачать
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteFile()">
+                                        <i class="fas fa-trash"></i> Удалить
+                                    </button>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> Файл диплома еще не загружен
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <hr>
+                    
+                    <h5>{% if diploma.file %}Заменить файл{% else %}Загрузить файл{% endif %}</h5>
+                    <form method="post" enctype="multipart/form-data" id="uploadForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Выберите файл</label>
+                            {{ form.file }}
+                            <div class="form-text">
+                                Поддерживаемые форматы: PDF, DOCX, DOC, TXT, JPG, PNG (макс. 10MB)
+                            </div>
+                            {% if form.file.errors %}
+                                <div class="alert alert-danger">
+                                    {{ form.file.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'diploma_orders:student_detail' diploma.student.id %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Назад
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> {% if diploma.file %}Заменить{% else %}Загрузить{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteFile() {
+    if (confirm('Вы уверены, что хотите удалить файл диплома?')) {
+        fetch('{% url "diploma_orders:delete_diploma_file" diploma.id %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Ошибка сети: ' + error);
+        });
+    }
+}
+
+// AJAX загрузка файла
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+    
+    fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Перенаправляем на страницу анализа
+            window.location.href = '{% url "diploma_orders:diploma_analysis" diploma.id %}';
+        } else {
+            alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        alert('Ошибка сети: ' + error);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+});
+</script>
+
+<style>
+.card {
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    border: none;
+}
+
+.alert {
+    border: none;
+    border-radius: 10px;
+}
+
+.form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.btn {
+    border-radius: 8px;
+    padding: 10px 20px;
+}
+</style>
+{% endblock %} 

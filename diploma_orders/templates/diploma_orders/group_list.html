@@ -1,0 +1,106 @@
+{% extends 'diploma_orders/base.html' %}
+
+{% block title %}Учебные группы{% endblock %}
+
+{% block content %}
+<!-- Заголовок -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title">Учебные группы</h1>
+        <p class="page-subtitle">Всего групп: {{ groups.count }}</p>
+    </div>
+    <div>
+        <a href="{% url 'admin:diploma_orders_group_add' %}" class="btn btn-primary">
+            <i class="fas fa-plus-circle me-2"></i>Добавить группу
+        </a>
+        <a href="{% url 'diploma_orders:student_list' %}" class="btn btn-outline-primary ms-2">
+            <i class="fas fa-users me-2"></i>Студенты
+        </a>
+    </div>
+</div>
+
+<!-- Список групп -->
+<div class="row">
+    {% for group in groups %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-start mb-3">
+                    <div class="bg-primary text-white rounded-circle p-3 me-3">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                    <div>
+                        <h4 class="card-title mb-1">{{ group.name }}</h4>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-university me-1"></i>{{ group.faculty }}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <span class="badge bg-info me-2">
+                        <i class="fas fa-book me-1"></i>{{ group.course }} курс
+                    </span>
+                    <span class="badge bg-success">
+                        <i class="fas fa-user-graduate me-1"></i>{{ group.student_count }} студентов
+                    </span>
+                </div>
+                
+                <!-- Прогресс бар для дипломных работ -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small class="text-muted">С дипломами: {{ group.with_diploma }}</small>
+                        <small class="text-muted">Без дипломов: {{ group.without_diploma }}</small>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        {% if group.student_count > 0 %}
+                            {% widthratio group.with_diploma group.student_count 100 as diploma_percentage %}
+                            <div class="progress-bar bg-success" 
+                                 style="width: {{ diploma_percentage }}%" 
+                                 role="progressbar"
+                                 aria-valuenow="{{ diploma_percentage }}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100">
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Статистика по статусам дипломов -->
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-chart-pie me-1"></i>
+                        {% if group.student_count > 0 %}
+                            Охват дипломами: 
+                            {% widthratio group.with_diploma group.student_count 100 %}%
+                        {% else %}
+                            Нет студентов в группе
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <div class="d-grid">
+                    <a href="{% url 'diploma_orders:group_detail' group.pk %}" class="btn btn-outline-primary">
+                        <i class="fas fa-external-link-alt me-2"></i>Перейти к группе
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-users fa-4x text-muted"></i>
+            </div>
+            <h3 class="mb-3">Группы не найдены</h3>
+            <p class="text-muted mb-4">Начните с добавления первой учебной группы</p>
+            <a href="{% url 'admin:diploma_orders_group_add' %}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-2"></i>Добавить группу
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

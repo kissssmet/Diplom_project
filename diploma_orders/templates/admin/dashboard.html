@@ -1,0 +1,410 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+/* Ваши стили остаются здесь */
+</style>
+
+<!-- Chart.js для круговых диаграмм -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h1 class="dashboard-title">
+        <span>📊</span> Панель управления дипломным проектированием
+    </h1>
+    
+    <!-- Отладочная информация (временно) -->
+    <div style="background: #ffebee; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none;" id="debug-info">
+        <h4>Отладка данных:</h4>
+        <pre id="debug-data"></pre>
+    </div>
+    
+    <!-- Основные карточки статистики -->
+    <div class="stats-grid">
+        <!-- Студенты -->
+        <div class="stat-card students">
+            <div class="stat-content">
+                <div class="stat-main">
+                    <div class="stat-icon students">👥</div>
+                    <div class="stat-numbers">
+                        <h3>{{ stats.student_count|default:"0" }}</h3>
+                        <p>Студентов всего</p>
+                    </div>
+                </div>
+                {% if stats.students_without_diploma > 0 %}
+                <div class="stat-badge warning">
+                    {{ stats.students_without_diploma }} без диплома
+                </div>
+                {% endif %}
+            </div>
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>Охват дипломными проектами</span>
+                    <span>{{ stats.diploma_percentage|default:"0" }}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill diploma" style="width: {{ stats.diploma_percentage|default:'0' }}%"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Руководители -->
+        <div class="stat-card supervisors">
+            <div class="stat-content">
+                <div class="stat-main">
+                    <div class="stat-icon supervisors">🎓</div>
+                    <div class="stat-numbers">
+                        <h3>{{ stats.supervisor_count|default:"0" }}</h3>
+                        <p>Научных руководителей</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Все проекты -->
+        <div class="stat-card projects">
+            <div class="stat-content">
+                <div class="stat-main">
+                    <div class="stat-icon projects">📝</div>
+                    <div class="stat-numbers">
+                        <h3>{{ stats.project_count|default:"0" }}</h3>
+                        <p>Дипломных проектов</p>
+                    </div>
+                </div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>В работе</span>
+                    <span>{{ stats.in_progress_projects|default:"0" }}</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill in-progress" style="width: {{ stats.in_progress_rate|default:'0' }}%"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Выполненные проекты -->
+        <div class="stat-card completed">
+            <div class="stat-content">
+                <div class="stat-main">
+                    <div class="stat-icon completed">✅</div>
+                    <div class="stat-numbers">
+                        <h3>{{ stats.completed_projects|default:"0" }}</h3>
+                        <p>Выполненных проектов</p>
+                    </div>
+                </div>
+                <div class="stat-badge success">
+                    {{ stats.completion_rate|default:"0" }}%
+                </div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>Процент выполнения</span>
+                    <span>{{ stats.completion_rate|default:"0" }}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill completed" style="width: {{ stats.completion_rate|default:'0' }}%"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Приказы -->
+        <div class="stat-card orders">
+            <div class="stat-content">
+                <div class="stat-main">
+                    <div class="stat-icon orders">📄</div>
+                    <div class="stat-numbers">
+                        <h3>{{ stats.order_count|default:"0" }}</h3>
+                        <p>Созданных приказов</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Группы -->
+        <div class="stat-card groups">
+            <div class="stat-content">
+                <div class="stat-main">
+                    <div class="stat-icon groups">👨‍👩‍👧‍👦</div>
+                    <div class="stat-numbers">
+                        <h3>{{ stats.group_count|default:"0" }}</h3>
+                        <p>Учебных групп</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Круговые диаграммы -->
+    <div class="charts-container">
+        <!-- Диаграмма 1: Распределение по статусам -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>📈 Распределение проектов по статусам</h3>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="statusChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+        
+        <!-- Диаграмма 2: Студенты с/без дипломов -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>👥 Распределение студентов</h3>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="studentChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Быстрые действия -->
+    <div class="actions-section">
+        <h3>⚡ Быстрые действия</h3>
+        <div class="actions-grid">
+            <a href="/admin/diploma_orders/student/add/" class="action-btn student">
+                <span style="font-size: 28px;">➕</span>
+                <span>Добавить студента</span>
+            </a>
+            <a href="/admin/diploma_orders/supervisor/add/" class="action-btn supervisor">
+                <span style="font-size: 28px;">👨‍🏫</span>
+                <span>Добавить руководителя</span>
+            </a>
+            <a href="/admin/diploma_orders/diplomaproject/add/" class="action-btn project">
+                <span style="font-size: 28px;">📝</span>
+                <span>Создать проект</span>
+            </a>
+            <a href="/admin/diploma_orders/grouporder/add/" class="action-btn order">
+                <span style="font-size: 28px;">📄</span>
+                <span>Создать приказ</span>
+            </a>
+            <a href="/admin/diploma_orders/group/add/" class="action-btn group">
+                <span style="font-size: 28px;">👨‍👩‍👧‍👦</span>
+                <span>Добавить группу</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Последние записи -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
+        <!-- Последние студенты -->
+        <div class="chart-card">
+            <h3>🆕 Последние студенты</h3>
+            {% if recent_students %}
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                {% for student in recent_students %}
+                <li style="padding: 12px 0; border-bottom: 1px solid var(--gray-medium);">
+                    <div style="font-weight: 500;">{{ student.get_full_name }}</div>
+                    <div style="font-size: 14px; color: var(--gray-dark);">
+                        {{ student.student_id }} • {{ student.group.name|default:"Без группы" }}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p style="text-align: center; color: #999; padding: 20px;">Нет студентов</p>
+            {% endif %}
+        </div>
+        
+        <!-- Последние проекты -->
+        <div class="chart-card">
+            <h3>🆕 Последние проекты</h3>
+            {% if recent_projects %}
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                {% for project in recent_projects %}
+                <li style="padding: 12px 0; border-bottom: 1px solid var(--gray-medium);">
+                    <div style="font-weight: 500;">{{ project.topic|truncatechars:50 }}</div>
+                    <div style="font-size: 14px; color: var(--gray-dark);">
+                        {{ project.student.get_full_name }} • {{ project.get_status_display }}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p style="text-align: center; color: #999; padding: 20px;">Нет проектов</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Отладочная информация
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard loaded');
+    
+    // Показываем отладочную информацию
+    const debugInfo = document.getElementById('debug-info');
+    const debugData = document.getElementById('debug-data');
+    
+    // Собираем данные для отладки
+    const debugDataObj = {
+        stats: {
+            student_count: {{ stats.student_count|default:"0" }},
+            project_count: {{ stats.project_count|default:"0" }},
+            completed_projects: {{ stats.completed_projects|default:"0" }},
+            in_progress_projects: {{ stats.in_progress_projects|default:"0" }},
+            not_started_projects: {{ stats.not_started_projects|default:"0" }},
+            students_without_diploma: {{ stats.students_without_diploma|default:"0" }}
+        },
+        recent_students_count: {{ recent_students|length|default:"0" }},
+        recent_projects_count: {{ recent_projects|length|default:"0" }}
+    };
+    
+    debugData.textContent = JSON.stringify(debugDataObj, null, 2);
+    
+    // Разблокируйте следующую строку, чтобы увидеть отладку
+    // debugInfo.style.display = 'block';
+    
+    // Проверяем, загрузился ли Chart.js
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js не загружен!');
+        alert('Ошибка: Chart.js не загружен. Проверьте подключение к интернету.');
+        return;
+    }
+    
+    console.log('Chart.js loaded:', Chart.version);
+    
+    // Создаем диаграмму 1: Распределение по статусам
+    try {
+        const statusCtx = document.getElementById('statusChart');
+        if (statusCtx) {
+            console.log('Создаем диаграмму статусов...');
+            
+            // Данные для диаграммы
+            const statusData = {
+                labels: ['Завершено', 'В работе', 'Не начато'],
+                datasets: [{
+                    data: [
+                        {{ stats.completed_projects|default:"0" }},
+                        {{ stats.in_progress_projects|default:"0" }},
+                        {{ stats.not_started_projects|default:"0" }}
+                    ],
+                    backgroundColor: ['#00cc96', '#ffce56', '#ff6384'],
+                    borderColor: '#ffffff',
+                    borderWidth: 2,
+                    hoverOffset: 15
+                }]
+            };
+            
+            const statusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: statusData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                padding: 20,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            console.log('Диаграмма статусов создана');
+        } else {
+            console.error('Canvas элемент statusChart не найден');
+        }
+    } catch (error) {
+        console.error('Ошибка при создании диаграммы статусов:', error);
+    }
+    
+    // Создаем диаграмму 2: Студенты с/без дипломов
+    try {
+        const studentCtx = document.getElementById('studentChart');
+        if (studentCtx) {
+            console.log('Создаем диаграмму студентов...');
+            
+            // Данные для диаграммы
+            const studentData = {
+                labels: ['С дипломными проектами', 'Без дипломных проектов'],
+                datasets: [{
+                    data: [
+                        {{ stats.project_count|default:"0" }},
+                        {{ stats.students_without_diploma|default:"0" }}
+                    ],
+                    backgroundColor: ['#4bc0c0', '#ff6384'],
+                    borderColor: '#ffffff',
+                    borderWidth: 3,
+                    hoverOffset: 15
+                }]
+            };
+            
+            const studentChart = new Chart(studentCtx, {
+                type: 'pie',
+                data: studentData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                padding: 20,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            console.log('Диаграмма студентов создана');
+        } else {
+            console.error('Canvas элемент studentChart не найден');
+        }
+    } catch (error) {
+        console.error('Ошибка при создании диаграммы студентов:', error);
+    }
+    
+    // Анимация прогресс-баров
+    try {
+        document.querySelectorAll('.progress-fill').forEach(bar => {
+            const width = bar.style.width;
+            bar.style.width = '0%';
+            setTimeout(() => {
+                bar.style.width = width;
+            }, 300);
+        });
+    } catch (error) {
+        console.error('Ошибка при анимации прогресс-баров:', error);
+    }
+    
+    console.log('Dashboard initialization complete');
+});
+</script>
+
+{{ block.super }}
+{% endblock %}

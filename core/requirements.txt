@@ -1,0 +1,15 @@
+Django>=4.0
+django-debug-toolbar>=4.0
+django-import-export>=3.0
+python-docx>=0.8.11
+Pillow>=9.0  # Для работы с изображениями
+openai>=1.0  # или другой провайдер ИИ
+anthropic>=0.7  # для Claude
+yandex-cloud-ai>=0.1  # для Yandex GPT
+pdfplumber>=0.10  # для работы с PDF
+pymupdf>=1.23  # альтернатива для PDF
+python-magic>=0.4  # проверка MIME-типов
+pytesseract>=0.3  # OCR для сканов
+python-docx2txt>=0.8  # извлечение текста из DOCX
+PyPDF2>=3.0  # работа с PDF
+reportlab>=4.0  # генерация PDF

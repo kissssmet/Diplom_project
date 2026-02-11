@@ -1,0 +1,302 @@
+{% extends 'diploma_orders/base.html' %}
+
+{% block title %}Умный генератор документов{% endblock %}
+
+{% block extra_css %}
+<style>
+    .template-card {
+        border: 2px solid transparent;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    .template-card:hover {
+        border-color: #0d6efd;
+        transform: translateY(-5px);
+    }
+    .template-card.selected {
+        border-color: #0d6efd;
+        background-color: #e7f1ff;
+    }
+    .field-input {
+        margin-bottom: 15px;
+    }
+    .preview-panel {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        min-height: 300px;
+        border: 1px solid #dee2e6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title">Умный генератор документов</h1>
+        <p class="page-subtitle">
+            {% if object_type == 'student' %}
+            Для студента: {{ object.get_full_name }}
+            {% else %}
+            Для группы: {{ object.name }}
+            {% endif %}
+        </p>
+    </div>
+    <div>
+        <a href="{% if object_type == 'student' %}{% url 'diploma_orders:student_detail' object.pk %}{% else %}{% url 'diploma_orders:group_detail' object.pk %}{% endif %}" 
+           class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Назад
+        </a>
+    </div>
+</div>
+
+<form method="post" id="documentForm">
+    {% csrf_token %}
+    
+    <div class="row">
+        <!-- Левая колонка: выбор шаблона -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Выберите шаблон</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" placeholder="Поиск шаблона..." id="templateSearch">
+                    </div>
+                    
+                    <div class="template-list">
+                        {% for template in templates %}
+                        <div class="card template-card mb-3" data-template-id="{{ template.id }}">
+                            <div class="card-body">
+                                <h6 class="card-title">{{ template.name }}</h6>
+                                <p class="card-text text-muted small">{{ template.description|truncatechars:100 }}</p>
+                                <div class="d-flex justify-content-between">
+                                    <span class="badge bg-info">{{ template.get_template_type_display }}</span>
+                                    <span class="badge bg-{% if template.is_active %}success{% else %}secondary{% endif %}">
+                                        {% if template.is_active %}Активный{% else %}Неактивный{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Шаблоны не найдены
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <input type="hidden" name="template" id="selectedTemplate" required>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Настройки</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Название документа</label>
+                        <input type="text" class="form-control" name="document_name" 
+                               placeholder="Введите название документа..." required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Примечания</label>
+                        <textarea class="form-control" name="notes" rows="3" 
+                                  placeholder="Дополнительные примечания..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100" id="generateBtn" disabled>
+                        <i class="fas fa-magic me-2"></i>Создать документ
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Центральная колонка: поля шаблона -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Заполните поля</h5>
+                </div>
+                <div class="card-body" id="templateFields">
+                    <div class="text-center py-5" id="noTemplateSelected">
+                        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Выберите шаблон слева, чтобы увидеть поля для заполнения</p>
+                    </div>
+                    
+                    <!-- Поля будут загружаться динамически через AJAX -->
+                    <div id="dynamicFields"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Правая колонка: предпросмотр -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Предпросмотр</h5>
+                </div>
+                <div class="card-body">
+                    <div class="preview-panel" id="previewContent">
+                        <div class="text-center py-5">
+                            <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Предпросмотр появится здесь после заполнения полей</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-outline-secondary w-100" id="refreshPreview">
+                            <i class="fas fa-sync-alt me-2"></i>Обновить предпросмотр
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const templateCards = document.querySelectorAll('.template-card');
+    const selectedTemplateInput = document.getElementById('selectedTemplate');
+    const generateBtn = document.getElementById('generateBtn');
+    const dynamicFields = document.getElementById('dynamicFields');
+    const noTemplateSelected = document.getElementById('noTemplateSelected');
+    const previewContent = document.getElementById('previewContent');
+    const templateSearch = document.getElementById('templateSearch');
+    
+    // Поиск шаблонов
+    templateSearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        templateCards.forEach(card => {
+            const title = card.querySelector('.card-title').textContent.toLowerCase();
+            const description = card.querySelector('.card-text').textContent.toLowerCase();
+            if (title.includes(searchTerm) || description.includes(searchTerm)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+    
+    // Выбор шаблона
+    templateCards.forEach(card => {
+        card.addEventListener('click', function() {
+            // Убираем выделение со всех карточек
+            templateCards.forEach(c => c.classList.remove('selected'));
+            // Выделяем выбранную
+            this.classList.add('selected');
+            
+            const templateId = this.dataset.templateId;
+            selectedTemplateInput.value = templateId;
+            generateBtn.disabled = false;
+            
+            // Загружаем поля шаблона
+            loadTemplateFields(templateId);
+        });
+    });
+    
+    // Загрузка полей шаблона
+    function loadTemplateFields(templateId) {
+        fetch(`/api/templates/${templateId}/fields/`)
+            .then(response => response.json())
+            .then(data => {
+                noTemplateSelected.style.display = 'none';
+                dynamicFields.innerHTML = '';
+                
+                if (data.fields && data.fields.length > 0) {
+                    data.fields.forEach(field => {
+                        const fieldHtml = `
+                            <div class="field-input">
+                                <label class="form-label">${field.label}</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       name="${field.name}" 
+                                       placeholder="${field.placeholder}"
+                                       value="${field.value || ''}"
+                                       data-field="${field.name}">
+                                ${field.help_text ? `<small class="text-muted">${field.help_text}</small>` : ''}
+                            </div>
+                        `;
+                        dynamicFields.innerHTML += fieldHtml;
+                    });
+                    
+                    // Добавляем обработчики для полей
+                    document.querySelectorAll('#dynamicFields input').forEach(input => {
+                        input.addEventListener('input', updatePreview);
+                    });
+                    
+                    // Первоначальное обновление предпросмотра
+                    updatePreview();
+                } else {
+                    dynamicFields.innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> У этого шаблона нет полей для заполнения
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading template fields:', error);
+                dynamicFields.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Ошибка загрузки полей шаблона
+                    </div>
+                `;
+            });
+    }
+    
+    // Обновление предпросмотра
+    function updatePreview() {
+        const templateId = selectedTemplateInput.value;
+        if (!templateId) return;
+        
+        const formData = new FormData();
+        formData.append('template_id', templateId);
+        
+        // Собираем значения полей
+        document.querySelectorAll('#dynamicFields input').forEach(input => {
+            formData.append(input.name, input.value);
+        });
+        
+        fetch(`/api/templates/${templateId}/preview/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                previewContent.innerHTML = data.preview;
+            }
+        })
+        .catch(error => {
+            console.error('Error updating preview:', error);
+        });
+    }
+    
+    // Кнопка обновления предпросмотра
+    document.getElementById('refreshPreview').addEventListener('click', updatePreview);
+    
+    // Вспомогательная функция для получения CSRF токена
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}

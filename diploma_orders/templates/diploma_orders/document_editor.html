@@ -1,0 +1,442 @@
+{% extends 'diploma_orders/base.html' %}
+
+{% block title %}Редактор: {{ document.document_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .editor-container {
+        display: flex;
+        gap: 20px;
+        min-height: 600px;
+    }
+    .editor-toolbar {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .editor-content {
+        flex: 1;
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .editor-sidebar {
+        width: 300px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+    }
+    .document-info {
+        background: white;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        border: 1px solid #dee2e6;
+    }
+    .collaborator-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .field-placeholder {
+        display: inline-block;
+        background: #e9ecef;
+        padding: 2px 8px;
+        margin: 0 5px;
+        border-radius: 3px;
+        font-family: monospace;
+        cursor: pointer;
+    }
+    .field-placeholder:hover {
+        background: #dee2e6;
+    }
+    #editorTextarea {
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        line-height: 1.6;
+        min-height: 500px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title">Редактор документа</h1>
+        <p class="page-subtitle">{{ document.document_number }} • {{ document.template.name }}</p>
+    </div>
+    <div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-success" id="saveDocument">
+                <i class="fas fa-save"></i> Сохранить
+            </button>
+            <button type="button" class="btn btn-outline-primary" onclick="window.print()">
+                <i class="fas fa-print"></i> Печать
+            </button>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                        data-bs-toggle="dropdown">
+                    <i class="fas fa-download"></i> Экспорт
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="{% url 'diploma_orders:export_document' document.id 'html' %}">
+                            <i class="fas fa-file-code"></i> HTML
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'diploma_orders:export_document' document.id 'docx' %}">
+                            <i class="fas fa-file-word"></i> Word (.docx)
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'diploma_orders:export_document' document.id 'pdf' %}">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <a href="{% url 'diploma_orders:document_view' document.id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-eye"></i> Просмотр
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="editor-container">
+    <!-- Основной редактор -->
+    <div class="editor-content">
+        <div class="editor-toolbar">
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                        data-bs-toggle="dropdown">
+                    <i class="fas fa-code"></i> Вставить поле
+                </button>
+                <ul class="dropdown-menu" id="fieldDropdown">
+                    {% for field in document.document_data.keys %}
+                    <li>
+                        <a class="dropdown-item insert-field" href="#" data-field="{{ field }}">
+                            {{ field|title }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-secondary format-btn" data-format="bold">
+                    <i class="fas fa-bold"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary format-btn" data-format="italic">
+                    <i class="fas fa-italic"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary format-btn" data-format="underline">
+                    <i class="fas fa-underline"></i>
+                </button>
+            </div>
+            
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-secondary format-btn" data-format="h1">
+                    H1
+                </button>
+                <button type="button" class="btn btn-outline-secondary format-btn" data-format="h2">
+                    H2
+                </button>
+            </div>
+            
+            <select class="form-select" style="width: auto;" id="fontSize">
+                <option value="12">12px</option>
+                <option value="14" selected>14px</option>
+                <option value="16">16px</option>
+                <option value="18">18px</option>
+                <option value="20">20px</option>
+            </select>
+        </div>
+        
+        <form method="post" id="editForm">
+            {% csrf_token %}
+            {{ form.content }}
+            
+            <div class="mt-3">
+                <label class="form-label">Статус документа</label>
+                {{ form.status }}
+            </div>
+        </form>
+        
+        <div class="mt-4">
+            <button type="button" class="btn btn-primary" id="saveDocumentBottom">
+                <i class="fas fa-save"></i> Сохранить изменения
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="previewBtn">
+                <i class="fas fa-eye"></i> Предпросмотр
+            </button>
+        </div>
+        
+        <!-- Панель предпросмотра -->
+        <div class="preview-panel mt-4" id="previewPanel" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Предпросмотр</h5>
+                </div>
+                <div class="card-body" id="previewContent">
+                    <!-- Предпросмотр будет загружен здесь -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Боковая панель -->
+    <div class="editor-sidebar">
+        <div class="document-info">
+            <h6>Информация о документе</h6>
+            <p class="mb-1"><strong>Номер:</strong> {{ document.document_number }}</p>
+            <p class="mb-1"><strong>Дата:</strong> {{ document.document_date|date:"d.m.Y" }}</p>
+            <p class="mb-1"><strong>Шаблон:</strong> {{ document.template.name }}</p>
+            <p class="mb-1"><strong>Статус:</strong> 
+                <span class="badge bg-{{ document.status }}">
+                    {{ document.get_status_display }}
+                </span>
+            </p>
+            <p class="mb-0"><strong>Создал:</strong> {{ document.created_by|default:"Система" }}</p>
+        </div>
+        
+        <div class="mb-4">
+            <h6>Участники</h6>
+            <div class="collaborator-list">
+                {% for collaborator in collaborators %}
+                <div class="d-flex align-items-center mb-2">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-user-circle fa-2x text-secondary"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <strong>{{ collaborator.user.get_full_name }}</strong>
+                        <div class="small text-muted">{{ collaborator.get_role_display }}</div>
+                        <div class="small">
+                            {% if collaborator.can_edit %}<span class="badge bg-info">Редактирование</span>{% endif %}
+                            {% if collaborator.can_comment %}<span class="badge bg-warning">Комментарии</span>{% endif %}
+                            {% if collaborator.can_approve %}<span class="badge bg-success">Согласование</span>{% endif %}
+                            {% if collaborator.can_sign %}<span class="badge bg-primary">Подписание</span>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted small">Нет участников</p>
+                {% endfor %}
+            </div>
+            
+            <button type="button" class="btn btn-outline-primary btn-sm w-100 mt-2" 
+                    data-bs-toggle="modal" data-bs-target="#addCollaboratorModal">
+                <i class="fas fa-user-plus"></i> Добавить участника
+            </button>
+        </div>
+        
+        <div>
+            <h6>Действия</h6>
+            <div class="d-grid gap-2">
+                <a href="{% url 'diploma_orders:document_history' document.id %}" 
+                   class="btn btn-outline-info">
+                    <i class="fas fa-history"></i> История изменений
+                </a>
+                <button type="button" class="btn btn-outline-warning" id="addComment">
+                    <i class="fas fa-comment"></i> Добавить комментарий
+                </button>
+                <button type="button" class="btn btn-outline-success" id="sendForApproval">
+                    <i class="fas fa-check-circle"></i> Отправить на согласование
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно добавления участника -->
+<div class="modal fade" id="addCollaboratorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить участника</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'diploma_orders:add_collaborator' document.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    {{ collaborator_form.as_p }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const editorTextarea = document.getElementById('id_content');
+    const saveBtn = document.getElementById('saveDocument');
+    const saveBtnBottom = document.getElementById('saveDocumentBottom');
+    const previewBtn = document.getElementById('previewBtn');
+    const previewPanel = document.getElementById('previewPanel');
+    const previewContent = document.getElementById('previewContent');
+    
+    // Вставка полей
+    document.querySelectorAll('.insert-field').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const field = this.dataset.field;
+            const placeholder = `{{${field}}}`;
+            
+            // Вставляем в текстовое поле
+            const start = editorTextarea.selectionStart;
+            const end = editorTextarea.selectionEnd;
+            const text = editorTextarea.value;
+            const newText = text.substring(0, start) + placeholder + text.substring(end);
+            
+            editorTextarea.value = newText;
+            
+            // Перемещаем курсор после вставленного поля
+            editorTextarea.selectionStart = start + placeholder.length;
+            editorTextarea.selectionEnd = start + placeholder.length;
+            editorTextarea.focus();
+        });
+    });
+    
+    // Форматирование текста
+    document.querySelectorAll('.format-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const format = this.dataset.format;
+            
+            // Для простого текстового поля делаем обертку
+            const start = editorTextarea.selectionStart;
+            const end = editorTextarea.selectionEnd;
+            const selectedText = editorTextarea.value.substring(start, end);
+            
+            let formattedText = selectedText;
+            
+            if (format === 'bold') {
+                formattedText = `**${selectedText}**`;
+            } else if (format === 'italic') {
+                formattedText = `*${selectedText}*`;
+            } else if (format === 'underline') {
+                formattedText = `__${selectedText}__`;
+            } else if (format === 'h1') {
+                formattedText = `# ${selectedText}`;
+            } else if (format === 'h2') {
+                formattedText = `## ${selectedText}`;
+            }
+            
+            const text = editorTextarea.value;
+            const newText = text.substring(0, start) + formattedText + text.substring(end);
+            editorTextarea.value = newText;
+            
+            // Обновляем выделение
+            editorTextarea.selectionStart = start;
+            editorTextarea.selectionEnd = start + formattedText.length;
+            editorTextarea.focus();
+        });
+    });
+    
+    // Изменение размера шрифта
+    document.getElementById('fontSize').addEventListener('change', function() {
+        const size = this.value;
+        editorTextarea.style.fontSize = size + 'px';
+    });
+    
+    // Сохранение документа
+    function saveDocument() {
+        const form = document.getElementById('editForm');
+        const formData = new FormData(form);
+        
+        fetch('{% url "diploma_orders:document_edit" document.id %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Документ сохранен!', 'success');
+            } else {
+                showToast('Ошибка сохранения: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error saving document:', error);
+            showToast('Ошибка сохранения', 'error');
+        });
+    }
+    
+    saveBtn.addEventListener('click', saveDocument);
+    saveBtnBottom.addEventListener('click', saveDocument);
+    
+    // Предпросмотр
+    previewBtn.addEventListener('click', function() {
+        const content = editorTextarea.value;
+        
+        // Простое форматирование для предпросмотра
+        let htmlContent = content
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/__(.*?)__/g, '<u>$1</u>')
+            .replace(/^# (.*?)$/gm, '<h3>$1</h3>')
+            .replace(/^## (.*?)$/gm, '<h4>$1</h4>')
+            .replace(/\{\{(.*?)\}\}/g, '<span class="field-placeholder">{$1}</span>');
+        
+        previewContent.innerHTML = `
+            <div style="font-family: 'Times New Roman', serif; font-size: 14pt; line-height: 1.5;">
+                ${htmlContent}
+            </div>
+        `;
+        
+        previewPanel.style.display = 'block';
+    });
+    
+    // Вспомогательные функции
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+        toast.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+    
+    // Автосохранение каждые 30 секунд
+    let autoSaveTimer;
+    editorTextarea.addEventListener('input', function() {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(() => {
+            saveDocument();
+        }, 30000); // 30 секунд
+    });
+});
+</script>
+{% endblock %}

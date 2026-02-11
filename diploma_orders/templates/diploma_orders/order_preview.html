@@ -1,0 +1,102 @@
+{% extends 'diploma_orders/base.html' %}
+
+{% block title %}Приказ - {{ student.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="order-container">
+    <!-- Навигация -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'diploma_orders:home' %}">Главная</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'diploma_orders:student_list' %}">Студенты</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'diploma_orders:student_detail' student.id %}">{{ student.get_full_name }}</a></li>
+            <li class="breadcrumb-item active">Предпросмотр приказа</li>
+        </ol>
+    </nav>
+    
+    <!-- Заголовок -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="page-title">Предпросмотр приказа</h1>
+        <a href="{% url 'diploma_orders:student_detail' student.id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Назад к студенту
+        </a>
+    </div>
+    
+    <!-- Информация о приказе -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Информация о приказе</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <p class="mb-1"><strong>Номер приказа:</strong></p>
+                    <p class="text-muted">{{ order_data.order_number }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <p class="mb-1"><strong>Дата формирования:</strong></p>
+                    <p class="text-muted">{{ current_date_str }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <p class="mb-1"><strong>Студент:</strong></p>
+                    <p class="text-muted">{{ order_data.student_name }} (№ {{ order_data.student_id }})</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <p class="mb-1"><strong>Научный руководитель:</strong></p>
+                    <p class="text-muted">{{ order_data.supervisor_name }}, {{ order_data.supervisor_degree }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Текст приказа -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Текст приказа</h5>
+        </div>
+        <div class="card-body">
+            <div class="order-text">
+                {{ order_text }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Кнопки экспорта -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-download me-2"></i>Экспорт приказа</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-4">
+                Вы можете скачать приказ в различных форматах для дальнейшего использования:
+            </p>
+            
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <form method="post" action="{% url 'diploma_orders:generate_order' student.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="format" value="md">
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-file-alt me-2"></i>Markdown (.md)
+                        </button>
+                    </form>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <form method="post" action="{% url 'diploma_orders:generate_order' student.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="format" value="docx">
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-file-word me-2"></i>Word (.docx)
+                        </button>
+                    </form>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <a href="javascript:window.print()" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-print me-2"></i>Распечатать
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

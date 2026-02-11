@@ -1,0 +1,221 @@
+{% extends 'diploma_orders/base.html' %}
+
+{% block title %}Список студентов{% endblock %}
+
+{% block content %}
+<!-- Заголовок -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title">Список студентов</h1>
+        <p class="page-subtitle">Всего студентов: {{ students.count }}</p>
+    </div>
+    <div>
+        <a href="{% url 'admin:diploma_orders_student_add' %}" class="btn btn-primary">
+            <i class="fas fa-user-plus me-2"></i>Добавить студента
+        </a>
+    </div>
+</div>
+
+<!-- Поиск и фильтры -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Фильтры</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Поиск</label>
+                <input type="text" class="form-control" name="query" 
+                       value="{{ request.GET.query }}" 
+                       placeholder="ФИО или номер студбилета">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Руководитель</label>
+                <select class="form-select" name="supervisor">
+                    <option value="">Все руководители</option>
+                    {% for supervisor in supervisors %}
+                    <option value="{{ supervisor.id }}" 
+                            {% if request.GET.supervisor == supervisor.id|stringformat:"i" %}selected{% endif %}>
+                        {{ supervisor }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Группа</label>
+                <select class="form-select" name="group">
+                    <option value="">Все группы</option>
+                    {% for group in groups %}
+                    <option value="{{ group.id }}" 
+                            {% if request.GET.group == group.id|stringformat:"i" %}selected{% endif %}>
+                        {{ group.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="d-flex gap-2 w-100">
+                    <button type="submit" class="btn btn-primary flex-grow-1">
+                        <i class="fas fa-search me-2"></i>Найти
+                    </button>
+                    <a href="{% url 'diploma_orders:student_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-redo me-2"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Список студентов -->
+{% if students %}
+<div class="row">
+    {% for student in students %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    {% if student.photo %}
+                    <img src="{{ student.photo.url }}" alt="{{ student }}" 
+                         class="student-photo mb-3">
+                    {% else %}
+                    <div class="default-avatar mb-3 mx-auto">
+                        {{ student.first_name|first }}{{ student.last_name|first }}
+                    </div>
+                    {% endif %}
+                    
+                    <h5 class="card-title mb-1">{{ student.get_full_name }}</h5>
+                    <p class="text-muted small mb-2">
+                        <i class="fas fa-id-card me-1"></i>{{ student.student_id }}
+                    </p>
+                    
+                    {% if student.group %}
+                    <span class="badge badge-primary mb-3">
+                        <i class="fas fa-users me-1"></i>{{ student.group.name }}
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <!-- Контакты -->
+                {% if student.email or student.phone %}
+                <div class="border-top pt-3 mb-3">
+                    <h6 class="text-primary mb-2"><i class="fas fa-address-card me-2"></i>Контакты</h6>
+                    {% if student.email %}
+                    <p class="small mb-1">
+                        <i class="fas fa-envelope me-2"></i>{{ student.email }}
+                    </p>
+                    {% endif %}
+                    {% if student.phone %}
+                    <p class="small mb-0">
+                        <i class="fas fa-phone me-2"></i>{{ student.phone }}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- Дипломный проект -->
+                {% if student.diploma_project %}
+                <div class="border-top pt-3">
+                    <h6 class="text-primary mb-2"><i class="fas fa-graduation-cap me-2"></i>Дипломный проект</h6>
+                    <p class="small mb-2">
+                        <strong>Тема:</strong> {{ student.diploma_project.topic|truncatechars:80 }}
+                    </p>
+                    <p class="small mb-2">
+                        <strong>Руководитель:</strong> {{ student.diploma_project.supervisor }}
+                    </p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge {{ student.diploma_project.get_status_display_class }}">
+                            {{ student.diploma_project.get_status_display }}
+                        </span>
+                        <span class="text-muted small">
+                            {{ student.diploma_project.deadline|date:"d.m.Y" }}
+                        </span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-warning small mb-0" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Дипломный проект не назначен
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-transparent border-top-0">
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'diploma_orders:student_detail' student.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-eye me-1"></i>Просмотр
+                    </a>
+                    {% if student.diploma_project %}
+                    <form method="post" action="{% url 'diploma_orders:generate_order' student.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="format" value="preview">
+                        <button type="submit" class="btn btn-sm btn-success">
+                            <i class="fas fa-file-download me-1"></i>Приказ
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Пагинация -->
+{% if is_paginated %}
+<nav aria-label="Навигация по страницам" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                <i class="fas fa-angle-double-left"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                <i class="fas fa-angle-left"></i>
+            </a>
+        </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+            </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                <i class="fas fa-angle-right"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                <i class="fas fa-angle-double-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<!-- Если студентов нет -->
+<div class="text-center py-5">
+    <i class="fas fa-users fa-4x text-muted mb-4"></i>
+    <h3 class="mb-3">Студенты не найдены</h3>
+    <p class="text-muted mb-4">Попробуйте изменить критерии поиска</p>
+    <a href="{% url 'diploma_orders:student_list' %}" class="btn btn-outline-primary me-2">
+        <i class="fas fa-redo me-2"></i>Сбросить фильтры
+    </a>
+    <a href="{% url 'admin:diploma_orders_student_add' %}" class="btn btn-primary">
+        <i class="fas fa-user-plus me-2"></i>Добавить студента
+    </a>
+</div>
+{% endif %}
+{% endblock %}

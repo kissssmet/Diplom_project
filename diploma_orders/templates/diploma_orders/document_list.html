@@ -1,0 +1,297 @@
+{% extends 'diploma_orders/base.html' %}
+
+{% block title %}Список документов{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'diploma_orders:home' %}">Главная</a></li>
+<li class="breadcrumb-item active">Документы</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title">Документы</h1>
+        <p class="page-subtitle">Всего документов: {{ documents.count }}</p>
+    </div>
+    <div>
+        <div class="btn-group" role="group">
+            <a href="{% url 'diploma_orders:document_list' %}" 
+               class="btn btn-outline-primary {% if not request.GET.type %}active{% endif %}">
+                Все
+            </a>
+            <a href="{% url 'diploma_orders:document_list' %}?type=student" 
+               class="btn btn-outline-primary {% if request.GET.type == 'student' %}active{% endif %}">
+                По студентам
+            </a>
+            <a href="{% url 'diploma_orders:document_list' %}?type=group" 
+               class="btn btn-outline-primary {% if request.GET.type == 'group' %}active{% endif %}">
+                По группам
+            </a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'diploma_orders:document_list' %}?my=1" 
+               class="btn btn-outline-primary {% if request.GET.my %}active{% endif %}">
+                Мои документы
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>№ документа</th>
+                        <th>Дата</th>
+                        <th>Тип</th>
+                        <th>Объект</th>
+                        <th>Шаблон</th>
+                        <th>Статус</th>
+                        <th>Автор</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for document in documents %}
+                    <tr>
+                        <td>
+                            <strong>{{ document.document_number }}</strong>
+                            <br>
+                            <small class="text-muted">{{ document.document_date|date:"d.m.Y" }}</small>
+                        </td>
+                        <td>{{ document.document_date|date:"d.m.Y" }}</td>
+                        <td>
+                            {% if document.student %}
+                                <span class="badge bg-info">Студент</span>
+                            {% elif document.group %}
+                                <span class="badge bg-success">Группа</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Общий</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if document.student %}
+                                <a href="{% url 'diploma_orders:student_detail' document.student.id %}">
+                                    {{ document.student.get_full_name }}
+                                </a>
+                            {% elif document.group %}
+                                <a href="{% url 'diploma_orders:group_detail' document.group.id %}">
+                                    Группа {{ document.group.name }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if document.template %}
+                                <a href="{% url 'diploma_orders:template_detail' document.template.id %}">
+                                    {{ document.template.name|truncatechars:20 }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if document.status == 'draft' %}
+                                <span class="badge bg-warning">Черновик</span>
+                            {% elif document.status == 'active' %}
+                                <span class="badge bg-success">Активный</span>
+                            {% elif document.status == 'archived' %}
+                                <span class="badge bg-secondary">Архив</span>
+                            {% elif document.status == 'approved' %}
+                                <span class="badge bg-primary">Утвержден</span>
+                            {% elif document.status == 'signed' %}
+                                <span class="badge bg-success">Подписан</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if document.created_by %}
+                                {{ document.created_by.get_full_name|default:document.created_by.username }}
+                            {% else %}
+                                <span class="text-muted">Система</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'diploma_orders:document_view' document.id %}" 
+                                   class="btn btn-outline-primary" title="Просмотр">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'diploma_orders:document_edit' document.id %}" 
+                                   class="btn btn-outline-secondary" title="Редактировать">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-info dropdown-toggle" 
+                                            data-bs-toggle="dropdown" title="Экспорт">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" 
+                                               href="{% url 'diploma_orders:export_document' document.id 'docx' %}">
+                                                <i class="fas fa-file-word me-2"></i>DOCX
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" 
+                                               href="{% url 'diploma_orders:export_document' document.id 'pdf' %}">
+                                                <i class="fas fa-file-pdf me-2"></i>PDF
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" 
+                                               href="{% url 'diploma_orders:export_document' document.id 'html' %}">
+                                                <i class="fas fa-file-code me-2"></i>HTML
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <div class="mb-3">
+                                <i class="fas fa-folder-open fa-3x text-muted"></i>
+                            </div>
+                            <h4 class="mb-3">Документы не найдены</h4>
+                            <p class="text-muted">Создайте первый документ</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if is_paginated %}
+        <nav aria-label="Навигация по страницам" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="fas fa-chevron-left"></i></span>
+                </li>
+                {% endif %}
+                
+                {% for i in paginator.page_range %}
+                    {% if page_obj.number == i %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ i }}</span>
+                    </li>
+                    {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            {{ i }}
+                        </a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="fas fa-chevron-right"></i></span>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-file-alt fa-3x text-primary"></i>
+                </div>
+                <h5>Создать для студента</h5>
+                <p class="text-muted">Создать документ на основе данных студента</p>
+                <a href="{% url 'diploma_orders:student_list' %}" class="btn btn-outline-primary">
+                    Выбрать студента
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-users fa-3x text-success"></i>
+                </div>
+                <h5>Создать для группы</h5>
+                <p class="text-muted">Создать документ на основе данных группы</p>
+                <a href="{% url 'diploma_orders:group_list' %}" class="btn btn-outline-success">
+                    Выбрать группу
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-plus-circle fa-3x text-info"></i>
+                </div>
+                <h5>Создать общий</h5>
+                <p class="text-muted">Создать документ без привязки к объекту</p>
+                <button class="btn btn-outline-info" disabled title="Скоро будет доступно">
+                    Создать документ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Фильтрация по статусу
+    const statusFilter = document.getElementById('statusFilter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', function() {
+            window.location.href = this.value;
+        });
+    }
+    
+    // Поиск документов
+    const searchInput = document.getElementById('documentSearch');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const searchTerm = this.value.trim();
+                if (searchTerm.length > 2 || searchTerm.length === 0) {
+                    const url = new URL(window.location.href);
+                    if (searchTerm) {
+                        url.searchParams.set('search', searchTerm);
+                    } else {
+                        url.searchParams.delete('search');
+                    }
+                    window.location.href = url.toString();
+                }
+            }, 500);
+        });
+    }
+});
+</script>
+{% endblock %}

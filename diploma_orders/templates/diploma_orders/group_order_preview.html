@@ -1,0 +1,322 @@
+{% extends 'diploma_orders/base.html' %}
+
+{% block title %}Предпросмотр приказа №{{ order.order_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .order-preview {
+        background: white;
+        padding: 40px;
+        font-family: 'Times New Roman', serif;
+        font-size: 14pt;
+        line-height: 1.5;
+        color: black;
+    }
+    
+    .order-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+    
+    .order-title {
+        font-weight: bold;
+        font-size: 16pt;
+    }
+    
+    .order-subtitle {
+        font-weight: bold;
+        font-size: 14pt;
+    }
+    
+    .order-info {
+        margin: 40px 0;
+    }
+    
+    .order-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 40px 0;
+        font-size: 12pt;
+    }
+    
+    .order-table th, .order-table td {
+        border: 1px solid black;
+        padding: 8px;
+        text-align: left;
+        vertical-align: top;
+    }
+    
+    .order-table th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+    
+    .signature-table {
+        width: 100%;
+        margin-top: 80px;
+        font-size: 12pt;
+    }
+    
+    .signature-cell {
+        padding: 20px 0;
+    }
+    
+    .text-center {
+        text-align: center;
+    }
+    
+    .text-right {
+        text-align: right;
+    }
+    
+    .mb-20 {
+        margin-bottom: 20px;
+    }
+    
+    .mb-40 {
+        margin-bottom: 40px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title">Предпросмотр приказа №{{ order.order_number }}</h1>
+        <p class="page-subtitle">Группа {{ group.name }} • {{ order.get_study_form_display }} форма</p>
+    </div>
+    <div>
+        <a href="{% url 'diploma_orders:group_order_detail' order.id %}" 
+           class="btn btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left me-2"></i>Назад
+        </a>
+        <a href="{% url 'diploma_orders:group_order_download' order.id %}" 
+           class="btn btn-success">
+            <i class="fas fa-download me-2"></i>Скачать Word
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="order-preview">
+            <!-- Заголовок -->
+            <div class="order-header">
+                <div class="order-title mb-40">
+                    Министерство науки и высшего образования Российской Федерации
+                </div>
+                
+                <div class="order-subtitle mb-20">
+                    Федеральное государственное бюджетное образовательное учреждение<br>
+                    высшего образования
+                </div>
+                
+                <div class="order-title mb-40">
+                    «Государственный университет управления»
+                </div>
+                
+                <div class="order-title mb-40">
+                    ПРИКАЗ
+                </div>
+            </div>
+            
+            <!-- Дата и номер -->
+            <div class="order-info">
+                <table width="100%">
+                    <tr>
+                        <td width="33%">{{ order_date_str }}</td>
+                        <td width="34%" class="text-center">г. Москва</td>
+                        <td width="33%" class="text-right">№ {{ order.order_number }}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Заголовок приказа -->
+            <div class="mb-40">
+                <div class="order-subtitle">
+                    ОБ утверждении тем выпускных<br>
+                    квалификационных работ и назначении руководителей
+                </div>
+            </div>
+            
+            <!-- ПРИКАЗЫВАЮ -->
+            <div class="mb-40">
+                <div class="order-subtitle">ПРИКАЗЫВАЮ:</div>
+            </div>
+            
+            <!-- Текст приказа -->
+            <div class="mb-40">
+                1. Утвердить темы выпускных квалификационных работ и назначить научных руководителей 
+                для студентов группы {{ order.group.name }} ({{ order.get_study_form_display }} форма обучения) 
+                направления подготовки {{ order.direction }}:
+            </div>
+            
+            <!-- Таблица -->
+            <table class="order-table">
+                <thead>
+                    <tr>
+                        <th width="5%">№ п/п</th>
+                        <th width="55%">ФИО студента, тема ВКР</th>
+                        <th width="40%">Научный руководитель</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            <strong>{{ student.get_full_name }}</strong><br>
+                            {% if student.diploma_project %}
+                            Тема: {{ student.diploma_project.topic }}
+                            {% else %}
+                            <span style="color: red;">Тема не назначена</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if student.diploma_project and student.diploma_project.supervisor %}
+                            {{ student.diploma_project.supervisor.get_full_name }},<br>
+                            {{ student.diploma_project.supervisor.academic_degree }},<br>
+                            {{ student.diploma_project.supervisor.position }}
+                            {% else %}
+                            <span style="color: red;">Не назначен</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <!-- Пункт 2 -->
+            <div class="mb-40">
+                2. Контроль за исполнением настоящего приказа возложить на и.о. заведующего кафедрой информационных систем Д.В. Стефановского.
+            </div>
+            
+            <!-- Подписи -->
+            <div class="signature-table">
+                <!-- Первая строка подписей -->
+                <table width="100%">
+                    <tr>
+                        <td width="50%" class="signature-cell">
+                            Проректор
+                        </td>
+                        <td width="50%" class="signature-cell"></td>
+                    </tr>
+                </table>
+                
+                <!-- Вторая строка подписей -->
+                <table width="100%">
+                    <tr>
+                        <td width="50%" class="signature-cell">
+                            ___________________ Д.Ю. Брюханов
+                        </td>
+                        <td width="50%" class="signature-cell"></td>
+                    </tr>
+                </table>
+                
+                <!-- Пустая строка -->
+                <div style="height: 40px;"></div>
+                
+                <!-- Проект приказа вносит -->
+                <table width="100%">
+                    <tr>
+                        <td width="50%" class="signature-cell">
+                            Проект приказа вносит:
+                        </td>
+                        <td width="50%" class="signature-cell text-right">
+                            Согласовано:
+                        </td>
+                    </tr>
+                </table>
+                
+                <!-- Должности -->
+                <table width="100%">
+                    <tr>
+                        <td width="50%" class="signature-cell">
+                            И.о. заведующего кафедрой<br>
+                            информационных систем
+                        </td>
+                        <td width="50%" class="signature-cell text-right">
+                            И.о. директора Института<br>
+                            информационных систем
+                        </td>
+                    </tr>
+                </table>
+                
+                <!-- Подписи -->
+                <table width="100%">
+                    <tr>
+                        <td width="50%" class="signature-cell">
+                            ___________________ Д.В. Стефановский
+                        </td>
+                        <td width="50%" class="signature-cell text-right">
+                            ___________________ О.М. Писарева
+                        </td>
+                    </tr>
+                </table>
+                
+                <!-- Пустая строка -->
+                <div style="height: 40px;"></div>
+                
+                <!-- Дополнительные подписи справа -->
+                <table width="100%">
+                    <tr>
+                        <td width="50%"></td>
+                        <td width="50%" class="text-right">
+                            Заместитель директора<br>
+                            Правового департамента
+                        </td>
+                    </tr>
+                </table>
+                
+                <table width="100%">
+                    <tr>
+                        <td width="50%"></td>
+                        <td width="50%" class="text-right signature-cell">
+                            ___________________ В.В. Андросенко
+                        </td>
+                    </tr>
+                </table>
+                
+                <!-- Пустая строка -->
+                <div style="height: 20px;"></div>
+                
+                <!-- Последняя подпись -->
+                <table width="100%">
+                    <tr>
+                        <td width="50%"></td>
+                        <td width="50%" class="text-right">
+                            Директор Департамента академической политики<br>
+                            и реализации образовательных программ
+                        </td>
+                    </tr>
+                </table>
+                
+                <table width="100%">
+                    <tr>
+                        <td width="50%"></td>
+                        <td width="50%" class="text-right signature-cell">
+                            ___________________ Н.А. Стракова
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4 text-center">
+    <div class="btn-group">
+        <a href="{% url 'diploma_orders:group_order_detail' order.id %}" 
+           class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Назад к приказу
+        </a>
+        <a href="{% url 'diploma_orders:group_order_download' order.id %}" 
+           class="btn btn-success">
+            <i class="fas fa-file-word me-2"></i>Скачать в Word
+        </a>
+        <button onclick="window.print()" class="btn btn-outline-primary">
+            <i class="fas fa-print me-2"></i>Распечатать
+        </button>
+    </div>
+</div>
+{% endblock %}

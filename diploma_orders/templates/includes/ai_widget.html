@@ -1,0 +1,251 @@
+<!-- diploma_orders/templates/diploma_orders/includes/ai_widget.html -->
+<div id="ai-widget" class="ai-widget" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+    <div class="card shadow-lg" style="width: 350px; max-height: 500px; display: none;" id="ai-chat-container">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">🎓 ИИ-помощник по диплому</h6>
+            <button type="button" class="btn-close btn-close-white" onclick="toggleAIChat()"></button>
+        </div>
+        <div class="card-body p-0" style="overflow-y: auto; max-height: 400px;" id="ai-chat-messages">
+            <!-- Сообщения будут здесь -->
+        </div>
+        <div class="card-footer">
+            <div class="input-group">
+                <input type="text" class="form-control" id="ai-question-input" 
+                       placeholder="Задайте вопрос по диплому...">
+                <button class="btn btn-primary" type="button" onclick="askAIQuestion()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <div class="mt-2" id="ai-suggestions">
+                <!-- Предложенные вопросы -->
+            </div>
+        </div>
+    </div>
+    
+    <button class="btn btn-primary rounded-circle p-3 shadow" onclick="toggleAIChat()" id="ai-toggle-btn">
+        <i class="fas fa-robot fa-2x"></i>
+    </button>
+</div>
+
+<script>
+let aiContextId = null;
+let currentPageText = '';
+
+// Инициализация ИИ-виджета
+document.addEventListener('DOMContentLoaded', function() {
+    // Собираем текст страницы для контекста
+    currentPageText = collectPageText();
+    
+    // Показываем кнопку ИИ на всех страницах
+    if (typeof window.showAIWidget !== 'undefined' && window.showAIWidget) {
+        document.getElementById('ai-widget').style.display = 'block';
+    }
+    
+    // Генерация вопросов при загрузке страницы диплома
+    if (window.location.pathname.includes('/diploma/')) {
+        generatePageQuestions();
+    }
+});
+
+function collectPageText() {
+    // Собираем основной текст страницы
+    const mainContent = document.querySelector('main, .content, .container') || document.body;
+    return mainContent.innerText.substring(0, 5000); // Ограничиваем размер
+}
+
+function toggleAIChat() {
+    const container = document.getElementById('ai-chat-container');
+    const button = document.getElementById('ai-toggle-btn');
+    
+    if (container.style.display === 'none' || !container.style.display) {
+        container.style.display = 'block';
+        button.style.display = 'none';
+        
+        // При первом открытии показываем приветствие
+        if (!aiContextId) {
+            addAIMessage('Привет! Я ИИ-помощник для работы с дипломными работами. Задайте мне вопрос по вашему диплому, и я постараюсь помочь!');
+            showAISuggestions();
+        }
+    } else {
+        container.style.display = 'none';
+        button.style.display = 'block';
+    }
+}
+
+function addAIMessage(text, isUser = false) {
+    const messagesDiv = document.getElementById('ai-chat-messages');
+    const messageDiv = document.createElement('div');
+    
+    messageDiv.className = `p-3 ${isUser ? 'bg-light text-end' : 'bg-white'}`;
+    messageDiv.innerHTML = `
+        <div class="d-flex ${isUser ? 'justify-content-end' : ''}">
+            ${!isUser ? '<div class="me-2"><i class="fas fa-robot text-primary"></i></div>' : ''}
+            <div class="p-2 rounded ${isUser ? 'bg-primary text-white' : 'bg-light'}">
+                ${text}
+            </div>
+            ${isUser ? '<div class="ms-2"><i class="fas fa-user text-muted"></i></div>' : ''}
+        </div>
+    `;
+    
+    messagesDiv.appendChild(messageDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function askAIQuestion() {
+    const input = document.getElementById('ai-question-input');
+    const question = input.value.trim();
+    
+    if (!question) return;
+    
+    // Показываем вопрос пользователя
+    addAIMessage(question, true);
+    input.value = '';
+    
+    // Показываем индикатор загрузки
+    const loadingId = 'ai-loading-' + Date.now();
+    addAIMessage('<div class="spinner-border spinner-border-sm text-primary"></div> Обработка вопроса...');
+    
+    // Отправляем запрос на сервер
+    fetch('/api/ai/ask/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({
+            question: question,
+            context: currentPageText,
+            page_id: getCurrentPageId()
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Удаляем индикатор загрузки
+        const messagesDiv = document.getElementById('ai-chat-messages');
+        messagesDiv.removeChild(messagesDiv.lastChild);
+        
+        // Добавляем ответ
+        addAIMessage(data.answer);
+        
+        // Сохраняем context_id
+        aiContextId = data.context_id;
+        
+        // Показываем предложенные вопросы
+        if (data.suggested_questions && data.suggested_questions.length > 0) {
+            showAISuggestions(data.suggested_questions);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        addAIMessage('Извините, произошла ошибка. Пожалуйста, попробуйте еще раз.');
+    });
+}
+
+function showAISuggestions(suggestions = null) {
+    const suggestionsDiv = document.getElementById('ai-suggestions');
+    suggestionsDiv.innerHTML = '';
+    
+    const defaultSuggestions = [
+        'Проверить соответствие формату ГОСТ',
+        'Сгенерировать вопросы для защиты',
+        'Написать рецензию на работу',
+        'Проанализировать структуру диплома'
+    ];
+    
+    const questions = suggestions || defaultSuggestions;
+    
+    questions.forEach(question => {
+        const button = document.createElement('button');
+        button.className = 'btn btn-outline-primary btn-sm me-1 mb-1';
+        button.textContent = question;
+        button.onclick = () => {
+            document.getElementById('ai-question-input').value = question;
+            askAIQuestion();
+        };
+        suggestionsDiv.appendChild(button);
+    });
+}
+
+function generatePageQuestions() {
+    // Генерация вопросов по текущей странице
+    const pageText = collectPageText();
+    
+    if (pageText.length < 100) return; // Не генерируем для пустых страниц
+    
+    fetch('/api/ai/generate-questions/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({
+            text: pageText,
+            page: getCurrentPageNumber()
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.questions && data.questions.length > 0) {
+            // Показываем вопросы в специальном блоке
+            showGeneratedQuestions(data.questions);
+        }
+    });
+}
+
+function showGeneratedQuestions(questions) {
+    const container = document.createElement('div');
+    container.className = 'card mt-3';
+    container.innerHTML = `
+        <div class="card-header">
+            <h6 class="mb-0">🤖 Вопросы для защиты (сгенерированы ИИ)</h6>
+        </div>
+        <div class="card-body">
+            <ol class="mb-0">
+                ${questions.map(q => `<li>${q.text} <span class="badge bg-secondary">${q.difficulty}</span></li>`).join('')}
+            </ol>
+        </div>
+    `;
+    
+    // Вставляем после основного контента
+    const mainContent = document.querySelector('main, .content, .container') || document.body;
+    mainContent.appendChild(container);
+}
+
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+}
+
+function getCurrentPageId() {
+    // Получаем ID страницы из data-атрибута
+    return document.body.dataset.pageId || null;
+}
+
+function getCurrentPageNumber() {
+    // Определяем номер страницы из URL или данных
+    const match = window.location.pathname.match(/page-(\d+)/);
+    return match ? parseInt(match[1]) : 1;
+}
+</script>
+
+<style>
+.ai-widget {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+#ai-chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+#ai-chat-messages::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+#ai-chat-messages::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+#ai-chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+</style>

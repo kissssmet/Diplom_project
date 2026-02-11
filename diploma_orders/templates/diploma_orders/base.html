@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}🎓 Дипломные приказы{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-light: #e8f4ff;
+            --primary-main: #1976d2;
+            --primary-dark: #115293;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --background-light: #ffffff;
+            --background-paper: #fafafa;
+            --border-color: #e0e0e0;
+            --success-color: #2e7d32;
+            --warning-color: #ed6c02;
+            --error-color: #d32f2f;
+            --shadow-light: 0 2px 8px rgba(0,0,0,0.05);
+            --shadow-medium: 0 4px 12px rgba(0,0,0,0.08);
+            --border-radius: 10px;
+        }
+        
+        * {
+            font-family: 'Inter', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-primary);
+        }
+        
+        body {
+            background-color: var(--background-paper);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding-top: 0;
+        }
+        
+        /* Навигация */
+        .navbar {
+            background: var(--background-light);
+            box-shadow: var(--shadow-light);
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary-dark) !important;
+        }
+        
+        .navbar-brand i {
+            color: var(--primary-main);
+        }
+        
+        .nav-link {
+            color: var(--text-secondary) !important;
+            font-weight: 500;
+            margin: 0 0.5rem;
+            transition: all 0.3s;
+            padding: 0.5rem 1rem !important;
+            border-radius: 8px;
+        }
+        
+        .nav-link:hover,
+        .nav-link.active {
+            color: var(--primary-dark) !important;
+            background-color: var(--primary-light);
+        }
+        
+        /* Карточки */
+        .card {
+            border: none;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-light);
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 1.5rem;
+            background: var(--background-light);
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+        
+        .card-header {
+            background: var(--background-light);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        /* Кнопки */
+        .btn {
+            border-radius: 8px;
+            font-weight: 500;
+            padding: 0.5rem 1.5rem;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+        
+        .btn-primary {
+            background: var(--primary-main);
+            border-color: var(--primary-main);
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            border-color: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(25, 118, 210, 0.2);
+        }
+        
+        .btn-outline-primary {
+            color: var(--primary-main);
+            border-color: var(--primary-main);
+        }
+        
+        .btn-outline-primary:hover {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+        }
+        
+        /* Таблицы */
+        .table {
+            background: var(--background-light);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-light);
+            margin-bottom: 0;
+        }
+        
+        .table thead th {
+            background: var(--background-paper);
+            border-bottom: 2px solid var(--border-color);
+            font-weight: 600;
+            color: var(--text-primary);
+            padding: 1rem 1.5rem;
+        }
+        
+        .table tbody td {
+            padding: 1rem 1.5rem;
+            border-color: var(--border-color);
+        }
+        
+        .table tbody tr:hover {
+            background-color: var(--primary-light);
+        }
+        
+        /* Формы */
+        .form-control, .form-select {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s;
+            background: var(--background-light);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-main);
+            box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+        }
+        
+        /* Бейджи */
+        .badge {
+            padding: 0.5em 0.8em;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.85em;
+        }
+        
+        .badge-success {
+            background-color: rgba(46, 125, 50, 0.1);
+            color: var(--success-color);
+        }
+        
+        .badge-warning {
+            background-color: rgba(237, 108, 2, 0.1);
+            color: var(--warning-color);
+        }
+        
+        .badge-primary {
+            background-color: rgba(25, 118, 210, 0.1);
+            color: var(--primary-main);
+        }
+        
+        .badge-info {
+            background-color: rgba(2, 136, 209, 0.1);
+            color: #0288d1;
+        }
+        
+        .badge-secondary {
+            background-color: rgba(97, 97, 97, 0.1);
+            color: #616161;
+        }
+        
+        /* Хлебные крошки */
+        .breadcrumb {
+            background: transparent;
+            padding: 0.5rem 0;
+        }
+        
+        .breadcrumb-item a {
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+        
+        .breadcrumb-item.active {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        /* Страница студента */
+        .student-profile {
+            background: var(--background-light);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--shadow-light);
+        }
+        
+        .student-photo {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid white;
+            box-shadow: var(--shadow-medium);
+        }
+        
+        /* Футер */
+        footer {
+            background: var(--background-light);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+        
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .footer-links a:hover {
+            color: var(--primary-main);
+        }
+        
+        /* Хедер страницы */
+        .page-header {
+            background: var(--background-light);
+            padding: 2rem 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+        
+        .page-title {
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        
+        /* Статистические карточки */
+        .stat-card {
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            background: var(--background-light);
+            box-shadow: var(--shadow-light);
+        }
+        
+        .stat-card i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-main);
+        }
+        
+        .stat-card .number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-card .label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        /* Приказ */
+        .order-container {
+            background: var(--background-light);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--shadow-light);
+        }
+        
+        .order-text {
+            font-family: 'Courier New', monospace;
+            background: var(--background-paper);
+            padding: 2rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-main);
+            white-space: pre-line;
+            line-height: 1.8;
+            color: var(--text-primary);
+        }
+        
+        /* Алерты */
+        .alert {
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 1rem 1.5rem;
+        }
+        
+        /* Прогресс бар */
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+            background-color: var(--background-paper);
+        }
+        
+        .progress-bar {
+            border-radius: 4px;
+        }
+        
+        /* Утилиты */
+        .text-muted {
+            color: var(--text-secondary) !important;
+        }
+        
+        .border-top {
+            border-color: var(--border-color) !important;
+        }
+        
+        .border-bottom {
+            border-color: var(--border-color) !important;
+        }
+        
+        /* Аватар по умолчанию */
+        .default-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-main) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+            font-weight: 600;
+            box-shadow: var(--shadow-medium);
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .card-body {
+                padding: 1rem;
+            }
+            
+            .student-photo, .default-avatar {
+                width: 120px;
+                height: 120px;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'diploma_orders:home' %}">
+                <i class="fas fa-file-contract me-2"></i>Диплом
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" 
+                           href="{% url 'diploma_orders:home' %}">
+                            <i class="fas fa-home me-2"></i>Главная
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'student_list' %}active{% endif %}" 
+                           href="{% url 'diploma_orders:student_list' %}">
+                            <i class="fas fa-users me-2"></i>Студенты
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'group_list' %}active{% endif %}" 
+                           href="{% url 'diploma_orders:group_list' %}">
+                            <i class="fas fa-layer-group me-2"></i>Группы
+                        </a>
+                    </li>
+                    <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'template_list' %}active{% endif %}"
+           href="{% url 'diploma_orders:template_list' %}">
+            <i class="fas fa-file-contract me-2"></i>Шаблоны
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.url_name == 'document_list' %}active{% endif %}"
+           href="{% url 'diploma_orders:document_list' %}">
+            <i class="fas fa-file-alt me-2"></i>Документы
+        </a>
+    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin:index' %}">
+                            <i class="fas fa-cog me-2"></i>Админ-панель
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Сообщения -->
+    {% if messages %}
+    <div class="container mt-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Основное содержимое -->
+    <main class="container py-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Футер -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-file-contract me-2"></i>Диплом</h5>
+                    <p class="mt-2 text-muted">
+                        Система формирования приказов по дипломным работам. Упрощает управление и документооборот.
+                    </p>
+                </div>
+                <div class="col-md-3">
+                    <h6>Навигация</h6>
+                    <div class="footer-links mt-2">
+                        <p><a href="{% url 'diploma_orders:home' %}">Главная</a></p>
+                        <p><a href="{% url 'diploma_orders:student_list' %}">Студенты</a></p>
+                        <p><a href="{% url 'diploma_orders:group_list' %}">Группы</a></p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <h6>Администрирование</h6>
+                    <div class="footer-links mt-2">
+                        <p><a href="{% url 'admin:index' %}">Панель управления</a></p>
+                        <p><a href="{% url 'admin:diploma_orders_student_add' %}">Добавить студента</a></p>
+                        <p><a href="{% url 'admin:diploma_orders_group_add' %}">Добавить группу</a></p>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <p class="text-muted mb-0">
+                        © 2026Система дипломных приказов. Все права защищены.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Плавная прокрутка
+        document.addEventListener('DOMContentLoaded', function() {
+            // Активация тултипов
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            })
+            
+            // Подсветка активной ссылки
+            var currentUrl = window.location.pathname;
+            document.querySelectorAll('.nav-link').forEach(function(link) {
+                if (link.getAttribute('href') === currentUrl) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

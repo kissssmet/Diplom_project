@@ -1,0 +1,48 @@
+<form method="post" action="{% url 'diploma_orders:api_section_detail' section.id %}" id="editSectionForm">
+    {% csrf_token %}
+    
+    <div class="mb-3">
+        <label class="form-label">Название раздела</label>
+        {{ form.title }}
+        {% if form.title.errors %}
+            <div class="text-danger small">{{ form.title.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Содержимое</label>
+        {{ form.content }}
+        {% if form.content.errors %}
+            <div class="text-danger small">{{ form.content.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label class="form-label">Порядок</label>
+            {{ form.order }}
+        </div>
+        <div class="col-md-6">
+            <div class="form-check mt-4">
+                {{ form.is_required }}
+                <label class="form-check-label">Обязательный раздел</label>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mb-3">
+        <div class="form-check">
+            {{ form.can_be_edited }}
+            <label class="form-check-label">Можно редактировать</label>
+        </div>
+    </div>
+    
+    {% if section.can_be_deleted %}
+    <div class="mb-3">
+        <div class="form-check">
+            {{ form.can_be_deleted }}
+            <label class="form-check-label">Можно удалить</label>
+        </div>
+    </div>
+    {% endif %}
+</form>

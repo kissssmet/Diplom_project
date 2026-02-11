@@ -1,0 +1,199 @@
+{% extends 'diploma_orders/base.html' %}
+
+{% block title %}История: {{ document.document_number }}{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'diploma_orders:home' %}">Главная</a></li>
+<li class="breadcrumb-item"><a href="{% url 'diploma_orders:document_list' %}">Документы</a></li>
+<li class="breadcrumb-item"><a href="{% url 'diploma_orders:document_view' document.id %}">{{ document.document_number }}</a></li>
+<li class="breadcrumb-item active">История</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-history me-2"></i>История изменений
+                    </h4>
+                    <a href="{% url 'diploma_orders:document_view' document.id %}" 
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Назад к документу
+                    </a>
+                </div>
+                <p class="text-muted mb-0 mt-2">{{ document.document_number }}</p>
+            </div>
+            
+            <div class="card-body">
+                {% if history %}
+                <div class="timeline">
+                    {% for entry in history %}
+                    <div class="timeline-item {% if forloop.first %}latest{% endif %}">
+                        <div class="timeline-marker">
+                            {% if entry.action == 'create' %}
+                                <i class="fas fa-plus text-success"></i>
+                            {% elif entry.action == 'edit' %}
+                                <i class="fas fa-edit text-primary"></i>
+                            {% elif entry.action == 'approve' %}
+                                <i class="fas fa-check text-success"></i>
+                            {% elif entry.action == 'comment' %}
+                                <i class="fas fa-comment text-info"></i>
+                            {% elif entry.action == 'status_change' %}
+                                <i class="fas fa-exchange-alt text-warning"></i>
+                            {% else %}
+                                <i class="fas fa-circle text-secondary"></i>
+                            {% endif %}
+                        </div>
+                        <div class="timeline-content">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1">
+                                        {% if entry.action == 'create' %}
+                                            Создание документа
+                                        {% elif entry.action == 'edit' %}
+                                            Редактирование
+                                        {% elif entry.action == 'approve' %}
+                                            Утверждение
+                                        {% elif entry.action == 'comment' %}
+                                            Комментарий
+                                        {% elif entry.action == 'status_change' %}
+                                            Изменение статуса
+                                        {% else %}
+                                            Изменение
+                                        {% endif %}
+                                    </h6>
+                                    <p class="text-muted mb-0 small">
+                                        <i class="far fa-clock me-1"></i>
+                                        {{ entry.timestamp|date:"d.m.Y H:i" }}
+                                    </p>
+                                </div>
+                                <div>
+                                    {% if entry.user %}
+                                        <span class="badge bg-light text-dark">
+                                            <i class="fas fa-user me-1"></i>
+                                            {{ entry.user.get_full_name|default:entry.user.username }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-light text-dark">
+                                            <i class="fas fa-robot me-1"></i>
+                                            Система
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            {% if entry.changes %}
+                            <div class="card bg-light mt-2">
+                                <div class="card-body py-2">
+                                    <pre class="mb-0 small">{{ entry.changes }}</pre>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if entry.action == 'status_change' %}
+                            <div class="mt-2">
+                                <span class="badge bg-light text-dark me-2">
+                                    <i class="fas fa-arrow-right me-1"></i>
+                                    Статус изменен
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="text-center mt-4">
+                    <p class="text-muted">
+                        Всего записей: {{ history|length }}
+                    </p>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-history fa-4x text-muted"></i>
+                    </div>
+                    <h4 class="mb-3">История изменений пуста</h4>
+                    <p class="text-muted mb-4">Здесь будут отображаться все изменения документа</p>
+                    <a href="{% url 'diploma_orders:document_view' document.id %}" 
+                       class="btn btn-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Назад к документу
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="card-footer">
+                <div class="d-grid">
+                    <a href="{% url 'diploma_orders:document_view' document.id %}" 
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Назад к документу
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #dee2e6;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 25px;
+    }
+    
+    .timeline-item.latest .timeline-marker {
+        background: #e3f2fd;
+        border-color: #1976d2;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -30px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 2px solid #dee2e6;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .timeline-content {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-family: inherit;
+        margin: 0;
+        background: transparent;
+        border: none;
+        padding: 0;
+    }
+</style>
+{% endblock %}

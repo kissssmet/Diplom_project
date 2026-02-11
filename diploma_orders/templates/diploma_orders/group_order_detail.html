@@ -1,0 +1,190 @@
+{% extends 'diploma_orders/base.html' %}
+
+{% block title %}Приказ №{{ order.order_number }}{% endblock %}
+
+{% block content %}
+<!-- Заголовок -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title">Приказ №{{ order.order_number }}</h1>
+        <p class="page-subtitle">от {{ order.order_date|date:"d.m.Y" }} • Группа {{ group.name }}</p>
+    </div>
+    <div>
+        <a href="{% url 'diploma_orders:group_order_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Назад к списку
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Информация о приказе -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Информация о приказе</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <p><strong>Номер приказа:</strong><br>{{ order.order_number }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <p><strong>Дата приказа:</strong><br>{{ order.order_date|date:"d.m.Y" }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <p><strong>Группа:</strong><br>
+                            <a href="{% url 'diploma_orders:group_detail' group.id %}">{{ group.name }}</a>
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <p><strong>Форма обучения:</strong><br>{{ order.get_study_form_display }}</p>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <p><strong>Направление подготовки:</strong><br>{{ order.direction }}</p>
+                    </div>
+                    {% if order.note %}
+                    <div class="col-12">
+                        <p><strong>Примечания:</strong><br>{{ order.note }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Список студентов в приказе -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>Студенты в приказе</h5>
+            </div>
+            <div class="card-body">
+                {% if students %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>№</th>
+                                <th>ФИО студента</th>
+                                <th>Тема ВКР</th>
+                                <th>Научный руководитель</th>
+                                <th>Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <a href="{% url 'diploma_orders:student_detail' student.id %}">
+                                        {{ student.get_full_name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {% if student.diploma_project %}
+                                    {{ student.diploma_project.topic|truncatechars:60 }}
+                                    {% else %}
+                                    <span class="text-danger">Не назначена</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if student.diploma_project and student.diploma_project.supervisor %}
+                                    {{ student.diploma_project.supervisor.get_full_name }}
+                                    {% else %}
+                                    <span class="text-danger">Не назначен</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if student.diploma_project %}
+                                    <span class="badge {{ student.diploma_project.get_status_display_class }}">
+                                        {{ student.diploma_project.get_status_display }}
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Нет проекта</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-users fa-4x text-muted mb-3"></i>
+                    <p class="text-muted">В группе нет студентов</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Действия с приказом -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-download me-2"></i>Экспорт приказа</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-3">
+                    <a href="{% url 'diploma_orders:group_order_preview' order.id %}" 
+                       class="btn btn-outline-info">
+                        <i class="fas fa-eye me-2"></i>Предпросмотр в браузере
+                    </a>
+                    
+                    <a href="{% url 'diploma_orders:group_order_download' order.id %}" 
+                       class="btn btn-success">
+                        <i class="fas fa-file-word me-2"></i>Скачать в формате Word
+                    </a>
+                    
+                    <button onclick="window.print()" class="btn btn-outline-secondary">
+                        <i class="fas fa-print me-2"></i>Распечатать
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Статистика -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Статистика</h5>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <strong>Всего студентов:</strong>
+            <span class="badge bg-primary float-end">{{ student_count }}</span>
+        </div>
+        
+        <div class="mb-3">
+            <strong>С назначенными темами:</strong>
+            <span class="badge bg-success float-end">
+                {{ with_diploma }}
+            </span>
+        </div>
+        
+        <div class="mb-3">
+            <strong>Без назначенных тем:</strong>
+            <span class="badge bg-warning float-end">
+                {{ without_diploma }}
+            </span>
+        </div>
+        
+        <div class="mb-3">
+            <strong>С назначенными руководителями:</strong>
+            <span class="badge bg-info float-end">
+                {{ with_supervisor }}
+            </span>
+        </div>
+        
+        <div class="progress mt-4" style="height: 10px;">
+            {% if student_count > 0 %}
+                <div class="progress-bar bg-success" 
+                     style="width: {{ diploma_percentage }}%" 
+                     role="progressbar">
+                </div>
+            {% endif %}
+        </div>
+        <small class="text-muted d-block mt-2">
+            Готовность: {% if student_count > 0 %}{{ diploma_percentage }}%{% else %}0%{% endif %}
+        </small>
+    </div>
+</div>
+</div>
+{% endblock %}
